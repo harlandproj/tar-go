@@ -14,6 +14,9 @@ func Run(args []string, version string) int {
 		ArchiveFormat:  cli.FormatGNU,
 	}
 	if err := cli.Parse(args, opts); err != nil {
+		if err == cli.ErrHelpRequested {
+			return 0
+		}
 		fmt.Fprintf(os.Stderr, "tar: %v\n", err)
 		return 2
 	}

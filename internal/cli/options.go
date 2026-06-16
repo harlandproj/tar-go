@@ -221,3 +221,9 @@ var (
 	Stderr = os.Stderr
 	Stdout = os.Stdout
 )
+
+var ErrHelpRequested = &exitError{code: 0}
+
+type exitError struct{ code int }
+
+func (e *exitError) Error() string { return "" }
