@@ -227,3 +227,10 @@ var ErrHelpRequested = &exitError{code: 0}
 type exitError struct{ code int }
 
 func (e *exitError) Error() string { return "" }
+
+type ExitError struct {
+	Code    int
+	Message string
+}
+
+func (e *ExitError) Error() string { return e.Message }

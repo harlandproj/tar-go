@@ -281,7 +281,7 @@ func (p *parser) applyShortArg(ch byte, val string) {
 			p.opts.RecordSize = n * 512
 		}
 	case 'C':
-		p.opts.FileNames = append(p.opts.FileNames, val)
+		p.opts.FileNames = append(p.opts.FileNames, "-C", val)
 	case 'L':
 		p.opts.TapeLength = parseSize(val)
 	case 'H':
@@ -379,7 +379,7 @@ func (p *parser) longOption(name string, val string, rest []string, idx *int) bo
 			p.opts.RecordSize = n
 		}
 	case "directory":
-		p.opts.FileNames = append(p.opts.FileNames, optStr(""))
+		p.opts.FileNames = append(p.opts.FileNames, "-C", optStr(""))
 	case "tape-length":
 		p.opts.TapeLength = parseSize(optStr("0"))
 	case "format":
