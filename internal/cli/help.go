@@ -7,8 +7,8 @@ import (
 
 func PrintHelp(prog string) {
 	fmt.Printf(`Usage: %s [OPTION...] [FILE]...
-GNU 'tar' saves many files together into a single tape or disk archive, and can
-restore individual files from the archive.
+tar-go is a pure-Go reimplementation of GNU tar. It saves many files together
+into a single archive, and can restore individual files from the archive.
 
 Examples:
   tar -cf archive.tar foo bar    Create archive.tar from files foo and bar.
@@ -195,12 +195,12 @@ Examples:
 }
 
 func PrintVersion(prog string) {
-	fmt.Printf("tar (GNU tar) 1.35\n")
-	fmt.Printf("Copyright (C) 2026 Free Software Foundation, Inc.\n")
+	fmt.Printf("tar (tar-go) 1.35\n")
+	fmt.Printf("Copyright (C) 2026 Harland Wang\n")
 	fmt.Printf("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n")
 	fmt.Printf("This is free software: you are free to change and redistribute it.\n")
 	fmt.Printf("There is NO WARRANTY, to the extent permitted by law.\n")
-	fmt.Printf("\nWritten by John Gilmore and Jay Fenlason.\n")
+	fmt.Printf("\nA pure-Go reimplementation, compatible with GNU tar.\n")
 	fmt.Printf("Built with %s\n", runtime.Version())
 }
 
