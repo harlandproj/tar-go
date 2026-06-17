@@ -13,6 +13,7 @@ import (
 	"github.com/harlandproj/tar-go/internal/cli"
 	"github.com/harlandproj/tar-go/internal/filters"
 	"github.com/harlandproj/tar-go/internal/increm"
+	"github.com/harlandproj/tar-go/internal/vol"
 )
 
 func Create(opts *cli.Options) error {
@@ -52,7 +53,16 @@ func Create(opts *cli.Options) error {
 
 	var tw *tar.Writer
 	if opts.MultiVolume && opts.TapeLength > 0 {
-		tw = tar.NewWriter(&volWriter{opts: opts, baseW: w})
+		archiveName := "tar.out"
+		if len(opts.ArchiveNames) > 0 {
+			archiveName = opts.ArchiveNames[0]
+		}
+		mv, err := vol.NewMultiVolWriter(archiveName, opts.TapeLength)
+		if err != nil {
+			return err
+		}
+		defer mv.Close()
+		tw = tar.NewWriter(mv)
 	} else {
 		tw = tar.NewWriter(w)
 	}
@@ -348,71 +358,4 @@ func readFileList(path string) []string {
 		}
 	}
 	return result
-}
-
-type volWriter struct {
-	opts   *cli.Options
-	baseW  io.WriteCloser
-	current *os.File
-	num     int
-	written int64
-	prefix  string
-}
-
-func (vw *volWriter) Write(p []byte) (int, error) {
-	if vw.current == nil {
-		if err := vw.openVol(1); err != nil {
-			return 0, err
-		}
-	}
-	total := 0
-	for len(p) > 0 {
-		space := vw.opts.TapeLength - vw.written
-		if space <= 0 {
-			vw.num++
-			if err := vw.openVol(vw.num); err != nil {
-				return total, err
-			}
-			space = vw.opts.TapeLength
-		}
-		toWrite := int64(len(p))
-		if toWrite > space {
-			toWrite = space
-		}
-		n, err := vw.current.Write(p[:toWrite])
-		total += n
-		vw.written += int64(n)
-		if err != nil {
-			return total, err
-		}
-		p = p[toWrite:]
-	}
-	return total, nil
-}
-
-func (vw *volWriter) openVol(n int) error {
-	if vw.current != nil {
-		vw.current.Close()
-	}
-	name := vw.opts.ArchiveNames[0]
-	if n > 1 {
-		ext := filepath.Ext(name)
-		base := name[:len(name)-len(ext)]
-		name = fmt.Sprintf("%s-%d%s", base, n, ext)
-	}
-	fmt.Fprintf(cli.Stderr, "tar: volume #%d = %s\n", n, name)
-	f, err := os.Create(name)
-	if err != nil {
-		return err
-	}
-	vw.current = f
-	vw.written = 0
-	return nil
-}
-
-func (vw *volWriter) Close() error {
-	if vw.current != nil {
-		vw.current.Close()
-	}
-	return nil
 }
