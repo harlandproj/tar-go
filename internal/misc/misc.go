@@ -20,7 +20,12 @@ func NormalizePath(name string) string {
 }
 
 func SafePath(base, name string) string {
-	return filepath.Join(base, filepath.Clean(name))
+	cleaned := filepath.Clean(string(filepath.Separator) + name)
+	joined := filepath.Join(base, cleaned)
+	if !strings.HasPrefix(joined, base+string(filepath.Separator)) && joined != base {
+		return filepath.Join(base, filepath.Base(name))
+	}
+	return joined
 }
 
 func DirExists(path string) bool {
