@@ -67,10 +67,9 @@ Produces:
 ## Project Structure
 
 ```
-├── cmd/tar/main.go              # Entry point
+├── cmd/tar/                     # Entry point & integration tests
 ├── internal/
 │   ├── app/                     # Application orchestration
-│   ├── archive/                 # Tar format read/write
 │   ├── cli/                     # GNU getopt-style CLI parser
 │   ├── compress/                # Pure-Go compression codecs
 │   ├── filters/                 # File exclusion & name transformation
@@ -78,8 +77,7 @@ Produces:
 │   ├── misc/                    # Shared utilities
 │   ├── ops/                     # Core operations (create/extract/list/...)
 │   └── vol/                     # Multi-volume support
-├── pkg/tar/                     # Public reusable library
-└── test/                        # Integration tests
+└── scripts/                     # Build scripts
 ```
 
 ## License
