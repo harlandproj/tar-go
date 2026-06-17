@@ -1,6 +1,6 @@
 module github.com/harlandproj/tar-go
 
-go 1.26.1
+go 1.22
 
 require (
 	github.com/dsnet/compress v0.0.1
