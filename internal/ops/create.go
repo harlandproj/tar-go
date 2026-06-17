@@ -61,10 +61,11 @@ func Create(opts *cli.Options) error {
 	if opts.VolumeLabel != "" {
 		hdr := &tar.Header{
 			Name:     opts.VolumeLabel,
-			Typeflag: tar.TypeGNULongName,
+			Typeflag: tar.TypeReg,
 			Size:     0,
 			Mode:     0o644,
 			ModTime:  time.Now(),
+			Format:   tar.FormatGNU,
 		}
 		tw.WriteHeader(hdr)
 	}

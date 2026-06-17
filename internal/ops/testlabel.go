@@ -34,27 +34,21 @@ func TestLabel(opts *cli.Options) error {
 		}
 
 		if hdr.Typeflag == tar.TypeGNULongName || hdr.Typeflag == tar.TypeGNULongLink {
+			io.Copy(io.Discard, tr)
 			continue
 		}
 
-		if hdr.Name == getVolumeLabelName() || isVolumeLabel(hdr) {
-			fmt.Println(hdr.Name)
-			if opts.VolumeLabel != "" && hdr.Name != opts.VolumeLabel {
-				fmt.Fprintf(os.Stderr, "tar: %s: volume label mismatch (found=%s, expected=%s)\n",
-					archiveName, hdr.Name, opts.VolumeLabel)
-				return errors.New("label mismatch")
+		if opts.VolumeLabel != "" {
+			if hdr.Name == opts.VolumeLabel {
+				fmt.Println(hdr.Name)
+				return nil
 			}
-			return nil
+			fmt.Fprintf(os.Stderr, "tar: %s: volume label mismatch (found=%s, expected=%s)\n",
+				archiveName, hdr.Name, opts.VolumeLabel)
+			return errors.New("label mismatch")
 		}
 
-		return errors.New("no label found")
+		fmt.Println(hdr.Name)
+		return nil
 	}
-}
-
-func getVolumeLabelName() string {
-	return "V"
-}
-
-func isVolumeLabel(hdr *tar.Header) bool {
-	return hdr.Name == getVolumeLabelName() && hdr.Typeflag == tar.TypeReg
 }

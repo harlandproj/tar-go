@@ -303,3 +303,23 @@ func TestExclude(t *testing.T) {
 		t.Error("included file missing")
 	}
 }
+
+func TestVolumeLabel(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "-C", dir, "--label=MYVOL", "file.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with label failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "--test-label", "-f", archive)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("test-label failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "MYVOL") {
+		t.Errorf("expected label MYVOL, got: %s", string(out))
+	}
+}
