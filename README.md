@@ -3,6 +3,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/harlandproj/tar-go)](https://goreportcard.com/report/github.com/harlandproj/tar-go)
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D1.22-blue)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
+[![CI](https://github.com/harlandproj/tar-go/actions/workflows/ci.yml/badge.svg)](https://github.com/harlandproj/tar-go/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/harlandproj/tar-go/branch/main/graph/badge.svg)](https://codecov.io/gh/harlandproj/tar-go)
 
 A complete, pure-Go reimplementation of GNU tar. Zero C dependencies, cross-platform, fully self-contained.
 
