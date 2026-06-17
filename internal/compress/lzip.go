@@ -18,7 +18,7 @@ const (
 type lzipCodec struct{}
 
 func (l lzipCodec) Name() string        { return "lzip" }
-func (l lzipCodec) Extensions() []string { return []string{"lz"} }
+func (l lzipCodec) Extensions() []string { return []string{"lz", "tlz", "tar.lz"} }
 
 func (l lzipCodec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	return newLzipReader(r)

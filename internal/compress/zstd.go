@@ -9,7 +9,7 @@ import (
 type zstdCodec struct{}
 
 func (z zstdCodec) Name() string        { return "zstd" }
-func (z zstdCodec) Extensions() []string { return []string{"zst", "zstd"} }
+func (z zstdCodec) Extensions() []string { return []string{"zst", "zstd", "tzst", "tar.zst"} }
 
 func (z zstdCodec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	dec, err := zstd.NewReader(r)

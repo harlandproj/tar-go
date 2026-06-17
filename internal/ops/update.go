@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/harlandproj/tar-go/internal/cli"
 )
@@ -21,7 +22,7 @@ func Update(opts *cli.Options) error {
 	}
 	archiveMtime := archiveInfo.ModTime()
 
-	f, err := os.OpenFile(archiveName, os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(archiveName, os.O_RDWR, 0o644)
 	if err != nil {
 		return fmt.Errorf("cannot open %s: %w", archiveName, err)
 	}
@@ -31,8 +32,13 @@ func Update(opts *cli.Options) error {
 	if err != nil {
 		return err
 	}
-	if fi.Size() >= 1024 {
-		if _, err := f.Seek(-1024, io.SeekEnd); err != nil {
+	pos := fi.Size()
+	if pos >= 1024 {
+		pos -= 1024
+		if _, err := f.Seek(pos, io.SeekStart); err != nil {
+			return err
+		}
+		if err := f.Truncate(pos); err != nil {
 			return err
 		}
 	}
@@ -40,11 +46,28 @@ func Update(opts *cli.Options) error {
 	tw := tar.NewWriter(f)
 	defer tw.Close()
 
+	files := resolveFiles(opts.FileNames)
+	baseDir, _ := os.Getwd()
 	added := 0
-	for _, file := range opts.FileNames {
-		info, err := os.Lstat(file)
+
+	for i := 0; i < len(files); i++ {
+		name := files[i]
+		if name == "-C" {
+			i++
+			if i < len(files) {
+				baseDir = files[i]
+			}
+			continue
+		}
+
+		fullPath := name
+		if !filepath.IsAbs(fullPath) {
+			fullPath = filepath.Join(baseDir, fullPath)
+		}
+
+		info, err := os.Lstat(fullPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "tar: %s: %v\n", file, err)
+			fmt.Fprintf(os.Stderr, "tar: %s: %v\n", name, err)
 			if !opts.IgnoreFailedRead {
 				return err
 			}
@@ -53,15 +76,15 @@ func Update(opts *cli.Options) error {
 
 		if !info.ModTime().After(archiveMtime) {
 			if opts.Verbose > 0 {
-				fmt.Fprintf(os.Stderr, "tar: %s: file is unchanged; not dumped\n", file)
+				fmt.Fprintf(os.Stderr, "tar: %s: file is unchanged; not dumped\n", name)
 			}
 			continue
 		}
 
 		if opts.Verbose > 0 {
-			fmt.Println(file)
+			fmt.Println(name)
 		}
-		if err := addFileToArchive(tw, file, info, ".", opts); err != nil {
+		if err := addFileToArchive(tw, fullPath, info, baseDir, opts); err != nil {
 			return err
 		}
 		added++

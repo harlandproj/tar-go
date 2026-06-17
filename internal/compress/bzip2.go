@@ -10,7 +10,7 @@ import (
 type bzip2Codec struct{}
 
 func (b bzip2Codec) Name() string        { return "bzip2" }
-func (b bzip2Codec) Extensions() []string { return []string{"bz2"} }
+func (b bzip2Codec) Extensions() []string { return []string{"bz2", "tbz2", "tbz", "tar.bz2"} }
 
 func (b bzip2Codec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	return nopReadCloser{bzip2.NewReader(r)}, nil

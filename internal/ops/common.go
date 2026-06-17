@@ -25,7 +25,7 @@ func openArchiveReader(opts *cli.Options) (io.ReadCloser, error) {
 		}
 	}
 	prog := opts.CompressProgram
-	if prog == "" && opts.AutoCompress {
+	if prog == "" {
 		c, ok := compress.ByExtension(archiveName)
 		if ok {
 			prog = c.Name()

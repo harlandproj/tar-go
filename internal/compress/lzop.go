@@ -15,7 +15,7 @@ var lzopMagic = []byte("\x89LZO\x00\r\n\x1a\n")
 type lzopCodec struct{}
 
 func (l lzopCodec) Name() string        { return "lzo" }
-func (l lzopCodec) Extensions() []string { return []string{"lzo"} }
+func (l lzopCodec) Extensions() []string { return []string{"lzo", "tlzo", "tar.lzo"} }
 
 func (l lzopCodec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	return newLzopReader(r)

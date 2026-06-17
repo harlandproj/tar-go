@@ -9,7 +9,7 @@ import (
 type lzmaCodec struct{}
 
 func (l lzmaCodec) Name() string        { return "lzma" }
-func (l lzmaCodec) Extensions() []string { return []string{"lzma"} }
+func (l lzmaCodec) Extensions() []string { return []string{"lzma", "tlzma", "tar.lzma"} }
 
 func (l lzmaCodec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	reader, err := lzma.NewReader(r)

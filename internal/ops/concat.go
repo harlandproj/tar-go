@@ -15,7 +15,7 @@ func Concat(opts *cli.Options) error {
 		archiveName = opts.ArchiveNames[0]
 	}
 
-	f, err := os.OpenFile(archiveName, os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(archiveName, os.O_RDWR, 0o644)
 	if err != nil {
 		return fmt.Errorf("cannot open %s: %w", archiveName, err)
 	}
@@ -25,8 +25,13 @@ func Concat(opts *cli.Options) error {
 	if err != nil {
 		return err
 	}
-	if fi.Size() >= 1024 {
-		if _, err := f.Seek(-1024, io.SeekEnd); err != nil {
+	pos := fi.Size()
+	if pos >= 1024 {
+		pos -= 1024
+		if _, err := f.Seek(pos, io.SeekStart); err != nil {
+			return err
+		}
+		if err := f.Truncate(pos); err != nil {
 			return err
 		}
 	}

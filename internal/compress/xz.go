@@ -9,7 +9,7 @@ import (
 type xzCodec struct{}
 
 func (x xzCodec) Name() string        { return "xz" }
-func (x xzCodec) Extensions() []string { return []string{"xz"} }
+func (x xzCodec) Extensions() []string { return []string{"xz", "txz", "tar.xz"} }
 
 func (x xzCodec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	reader, err := xz.NewReader(r)

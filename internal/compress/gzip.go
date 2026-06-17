@@ -8,7 +8,7 @@ import (
 type gzipCodec struct{}
 
 func (g gzipCodec) Name() string                { return "gzip" }
-func (g gzipCodec) Extensions() []string         { return []string{"gz"} }
+func (g gzipCodec) Extensions() []string         { return []string{"gz", "tgz", "tar.gz"} }
 
 func (g gzipCodec) NewReader(r io.Reader) (io.ReadCloser, error) {
 	return gzip.NewReader(r)
