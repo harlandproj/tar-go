@@ -136,10 +136,11 @@ func Extract(opts *cli.Options) error {
 						continue
 					}
 					os.Remove(name)
+				default:
+					os.Remove(name)
 				}
 			}
 			os.MkdirAll(filepath.Dir(name), 0o755)
-			os.Remove(name)
 			os.Symlink(hdr.Linkname, name)
 
 		case tar.TypeLink:
@@ -152,10 +153,11 @@ func Extract(opts *cli.Options) error {
 					continue
 				case cli.OldOverwrite, cli.OldUnlinkFirst:
 					os.Remove(name)
+				default:
+					os.Remove(name)
 				}
 			}
 			os.MkdirAll(filepath.Dir(name), 0o755)
-			os.Remove(name)
 			os.Link(hdr.Linkname, name)
 
 		case tar.TypeGNUSparse:

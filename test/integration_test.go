@@ -323,3 +323,36 @@ func TestVolumeLabel(t *testing.T) {
 		t.Errorf("expected label MYVOL, got: %s", string(out))
 	}
 }
+
+func TestExtractOverwriteSymlink(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, "out")
+	os.MkdirAll(outDir, 0o755)
+
+	target := filepath.Join(dir, "target.txt")
+	os.WriteFile(target, []byte("target"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	f, err := os.Create(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tw := tar.NewWriter(f)
+	tw.WriteHeader(&tar.Header{Name: "link", Typeflag: tar.TypeSymlink, Linkname: target, Mode: 0o777})
+	tw.Close()
+	f.Close()
+
+	cmd := exec.Command(bin(), "-xf", archive, "--overwrite", "-C", outDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("extract failed: %v\n%s", err, out)
+	}
+
+	link := filepath.Join(outDir, "link")
+	fi, err := os.Lstat(link)
+	if err != nil {
+		t.Fatalf("link not found: %v", err)
+	}
+	if fi.Mode()&os.ModeSymlink == 0 {
+		t.Error("expected symlink")
+	}
+}
