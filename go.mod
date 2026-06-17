@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/dsnet/compress v0.0.1
-	github.com/klauspost/compress v1.18.6
+	github.com/klauspost/compress v1.17.11
 	github.com/ulikunitz/xz v0.5.15
 )
 
