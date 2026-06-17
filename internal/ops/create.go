@@ -21,9 +21,6 @@ func Create(opts *cli.Options) error {
 	if opts.FilesFrom != "" {
 		files = append(files, readFileList(opts.FilesFrom)...)
 	}
-	if len(files) == 0 {
-		files = []string{"."}
-	}
 
 	var xform *filters.Transform
 	if opts.Transform != "" {
@@ -285,7 +282,7 @@ func addFileToArchive(tw *tar.Writer, path string, info os.FileInfo, baseDir str
 	defer f.Close()
 
 	if opts.Sparse {
-		if err := writeSparseFile(tw, f, info, hdr.Name, opts); err != nil {
+		if err := writeSparseFile(tw, f, info, hdr.Name); err != nil {
 			return err
 		}
 	} else {
@@ -320,26 +317,6 @@ func setArchiveFormat(hdr *tar.Header, fmt cli.ArchiveFormat) {
 	case cli.FormatPOSIX:
 		hdr.Format = tar.FormatPAX
 	}
-}
-
-func expandFilesFrom(opts *cli.Options, files []string) []string {
-	if opts.FilesFrom == "" {
-		return files
-	}
-	f, err := os.Open(opts.FilesFrom)
-	if err != nil {
-		fmt.Fprintf(cli.Stderr, "tar: %s: %v\n", opts.FilesFrom, err)
-		return files
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line != "" && !strings.HasPrefix(line, "#") {
-			files = append(files, line)
-		}
-	}
-	return files
 }
 
 func readFileList(path string) []string {

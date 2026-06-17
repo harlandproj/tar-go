@@ -6,9 +6,9 @@ import (
 	"io"
 	"os/user"
 	"strconv"
-	"time"
 
 	"github.com/harlandproj/tar-go/internal/cli"
+	"github.com/harlandproj/tar-go/internal/filters"
 )
 
 func List(opts *cli.Options) error {
@@ -20,41 +20,86 @@ func List(opts *cli.Options) error {
 
 	tr := tar.NewReader(r)
 
+	var xform *filters.Transform
+	if opts.Transform != "" {
+		xform, err = filters.NewTransform(opts.Transform)
+		if err != nil {
+			return fmt.Errorf("invalid --transform: %w", err)
+		}
+	}
+
+	totalBytes := int64(0)
+	skipping := opts.StartingFile != ""
+	foundCounts := make(map[string]int)
+	blockNum := 0
+
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
+			if opts.IgnoreZeros {
+				continue
+			}
 			return err
 		}
 
-		hdr.ModTime = hdr.ModTime.In(time.Local)
+		if skipping {
+			if hdr.Name != opts.StartingFile {
+				io.Copy(io.Discard, tr)
+				continue
+			}
+			skipping = false
+		}
 
+		if opts.Occurrence > 0 {
+			foundCounts[hdr.Name]++
+			if foundCounts[hdr.Name] != opts.Occurrence {
+				io.Copy(io.Discard, tr)
+				continue
+			}
+		}
+
+		name := hdr.Name
+		if xform != nil {
+			name = xform.Apply(name)
+		}
+
+		blockNum++
 		if opts.Verbose > 0 {
-			line := formatVerbose(hdr, opts)
+			line := formatVerbose(hdr, name, opts, blockNum)
 			fmt.Fprintln(cli.Stdout, line)
 		} else {
-			fmt.Fprintln(cli.Stdout, hdr.Name)
+			fmt.Fprintln(cli.Stdout, name)
 		}
 
-		if _, err := io.Copy(io.Discard, tr); err != nil {
-			return err
-		}
+		io.Copy(io.Discard, tr)
+		totalBytes += hdr.Size
 	}
+
+	if opts.ShowTotals {
+		fmt.Fprintf(cli.Stderr, "Total bytes read: %d\n", totalBytes)
+	}
+
+	if opts.CheckLinks {
+		fmt.Fprintln(cli.Stderr, "tar: check-links not fully implemented")
+	}
+
 	return nil
 }
 
-func formatVerbose(hdr *tar.Header, opts *cli.Options) string {
+func formatVerbose(hdr *tar.Header, name string, opts *cli.Options, blockNum int) string {
 	perm := hdr.FileInfo().Mode().String()
-	if hdr.Typeflag == tar.TypeDir && perm[0] != 'd' {
-		perm = "d" + perm[1:]
-	} else if hdr.Typeflag == tar.TypeSymlink {
-		perm = "L" + perm[1:]
-	}
-
-	if perm == "-rwxrwxrwx" {
-		perm = "----------"
+	switch hdr.Typeflag {
+	case tar.TypeDir:
+		if perm[0] != 'd' {
+			perm = "d" + perm[1:]
+		}
+	case tar.TypeSymlink:
+		perm = "l" + perm[1:]
+	case tar.TypeLink:
+		perm = "h" + perm[1:]
 	}
 
 	uname := hdr.Uname
@@ -66,6 +111,9 @@ func formatVerbose(hdr *tar.Header, opts *cli.Options) string {
 			uname = strconv.Itoa(hdr.Uid)
 		}
 	}
+	if opts.NumericOwner {
+		uname = strconv.Itoa(hdr.Uid)
+	}
 
 	gname := hdr.Gname
 	if gname == "" {
@@ -76,6 +124,9 @@ func formatVerbose(hdr *tar.Header, opts *cli.Options) string {
 			gname = strconv.Itoa(hdr.Gid)
 		}
 	}
+	if opts.NumericOwner {
+		gname = strconv.Itoa(hdr.Gid)
+	}
 
 	size := strconv.FormatInt(hdr.Size, 10)
 
@@ -83,24 +134,26 @@ func formatVerbose(hdr *tar.Header, opts *cli.Options) string {
 	if opts.Utc {
 		t = t.UTC()
 	}
-	dateStr := t.Format("2006-01-02 15:04")
+	var dateStr string
+	if opts.FullTime {
+		dateStr = t.Format("2006-01-02 15:04:05.999999999 -0700")
+	} else {
+		dateStr = t.Format("2006-01-02 15:04")
+	}
 
-	name := hdr.Name
+	displayName := name
 	if hdr.Typeflag == tar.TypeSymlink {
-		name = name + " -> " + hdr.Linkname
+		displayName = name + " -> " + hdr.Linkname
 	} else if hdr.Typeflag == tar.TypeLink {
-		name = name + " link to " + hdr.Linkname
+		displayName = name + " link to " + hdr.Linkname
 	}
 
-	return fmt.Sprintf("%s %s/%-8s %s %s %s",
-		perm, uname, gname, rightPad(size, 8), dateStr, name)
-}
+	result := fmt.Sprintf("%s %s/%s %8s %s %s",
+		perm, uname, gname, size, dateStr, displayName)
 
-func rightPad(s string, width int) string {
-	if len(s) >= width {
-		return s
+	if opts.BlockNumber {
+		result = fmt.Sprintf("block %d: %s", blockNum, result)
 	}
-	return s + spaces[:width-len(s)]
-}
 
-var spaces = "                "
+	return result
+}

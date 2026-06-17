@@ -16,7 +16,7 @@ func detectHoles(f *os.File, size int64) []SparseHole {
 		return nil
 	}
 	var holes []SparseHole
-	buf := make([]byte, 512)
+	buf := make([]byte, 4096)
 	var pos int64
 	var inHole bool
 	var holeStart int64
@@ -59,21 +59,24 @@ func detectHoles(f *os.File, size int64) []SparseHole {
 	return holes
 }
 
-func writeSparseFile(tw *tar.Writer, f *os.File, info os.FileInfo, opts interface{}) error {
+func writeSparseFile(tw *tar.Writer, f *os.File, info os.FileInfo, name string) error {
 	holes := detectHoles(f, info.Size())
 	if len(holes) == 0 {
 		hdr, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
+		hdr.Name = name
 		if err := tw.WriteHeader(hdr); err != nil {
 			return err
 		}
+		f.Seek(0, io.SeekStart)
 		_, err = io.Copy(tw, f)
 		return err
 	}
+
 	hdr := &tar.Header{
-		Name:     info.Name(),
+		Name:     name,
 		Size:     info.Size(),
 		Mode:     int64(info.Mode()),
 		ModTime:  info.ModTime(),
@@ -82,56 +85,22 @@ func writeSparseFile(tw *tar.Writer, f *os.File, info os.FileInfo, opts interfac
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
 	}
+
 	var pos int64
 	for _, hole := range holes {
 		if hole.Offset > pos {
-			toWrite := hole.Offset - pos
-			written := int64(0)
-			for written < toWrite {
-				buf := make([]byte, min(65536, toWrite-written))
-				n, err := f.ReadAt(buf, pos+written)
-				if err != nil && err != io.EOF {
-					return err
-				}
-				if n > 0 {
-					if _, err := tw.Write(buf[:n]); err != nil {
-						return err
-					}
-					written += int64(n)
-				} else {
-					break
-				}
+			if _, err := io.CopyN(tw, io.NewSectionReader(f, pos, hole.Offset-pos), hole.Offset-pos); err != nil {
+				return err
 			}
 		}
 		pos = hole.Offset + hole.Length
 	}
 	if pos < info.Size() {
-		toWrite := info.Size() - pos
-		written := int64(0)
-		for written < toWrite {
-			buf := make([]byte, min(65536, toWrite-written))
-			n, err := f.ReadAt(buf, pos+written)
-			if err != nil && err != io.EOF {
-				return err
-			}
-			if n > 0 {
-				if _, err := tw.Write(buf[:n]); err != nil {
-					return err
-				}
-				written += int64(n)
-			} else {
-				break
-			}
+		if _, err := io.CopyN(tw, io.NewSectionReader(f, pos, info.Size()-pos), info.Size()-pos); err != nil {
+			return err
 		}
 	}
 	return nil
-}
-
-func min(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func isSparseType(hdr *tar.Header) bool {
