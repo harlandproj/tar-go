@@ -263,6 +263,8 @@ func (p *parser) shortOption(ch byte, rest []string, idx *int, isLast bool) (nee
 		return true, ""
 	case 'V':
 		return true, ""
+	case 'T':
+		return true, ""
 
 	default:
 		p.errorMsg = fmt.Sprintf("Invalid option -- '%c'\nTry 'tar --help' or 'tar --usage' for more information.", ch)
@@ -299,6 +301,8 @@ func (p *parser) applyShortArg(ch byte, val string) {
 		p.opts.CompressProgram = val
 	case 'V':
 		p.opts.VolumeLabel = val
+	case 'T':
+		p.opts.FilesFrom = val
 	}
 }
 
@@ -493,6 +497,8 @@ func (p *parser) longOption(name string, val string, rest []string, idx *int) bo
 
 	case "exclude":
 		p.opts.Exclude = append(p.opts.Exclude, optStr(""))
+	case "files-from":
+		p.opts.FilesFrom = optStr("")
 	case "exclude-from":
 		p.opts.ExcludeFrom = optStr("")
 	case "exclude-caches":
@@ -647,6 +653,17 @@ func (p *parser) longOption(name string, val string, rest []string, idx *int) bo
 		p.opts.RmtCommand = optStr("")
 	case "rsh-command":
 		p.opts.RshCommand = optStr("")
+	case "add-file":
+		p.opts.FileNames = append(p.opts.FileNames, optStr(""))
+	case "no-ignore-case":
+	case "no-ignore-command-error":
+		p.opts.IgnoreCommandErr = false
+	case "no-null":
+	case "no-overwrite-dir":
+		p.opts.OverwriteDir = false
+	case "no-same-permissions":
+		p.opts.SamePermissions = false
+	case "no-unquote":
 	case "warning-option":
 		p.parseWarningOption(optStr(""))
 	default:

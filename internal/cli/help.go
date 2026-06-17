@@ -114,14 +114,6 @@ Examples:
 		{"--xattrs", "Enable extended attributes support"},
 		{"--xattrs-exclude=MASK", "specify the exclude pattern for xattr keys"},
 		{"--xattrs-include=MASK", "specify the include pattern for xattr keys"},
-		{"-z, --gzip, --gunzip, --ungzip", "filter the archive through gzip"},
-		{"-Z, --compress, --uncompress", "filter the archive through compress"},
-		{"-j, --bzip2", "filter the archive through bzip2"},
-		{"-J, --xz", "filter the archive through xz"},
-		{"--lzip", "filter the archive through lzip"},
-		{"--lzma", "filter the archive through lzma"},
-		{"--lzop", "filter the archive through lzop"},
-		{"--zstd", "filter the archive through zstd"},
 	}
 	otherSection := false
 	for _, o := range otherOpts {
@@ -141,9 +133,7 @@ Examples:
 		{"--hard-dereference", "follow hard links; archive and dump the files they refer to"},
 		{"--keep-directory-symlink", "preserve existing symlinks to directories when extracting"},
 		{"--keep-newer-files", "don't replace existing files that are newer than their archive copies"},
-		{"-n, --seek", "archive is seekable"},
 		{"--no-acls", "Disable the POSIX ACLs support"},
-		{"--no-delay-directory-restore", "cancel the effect of --delay-directory-restore option"},
 		{"--no-ignore-case", "use case-sensitive matching"},
 		{"--no-ignore-command-error", "process non-zero exit codes from child programs on error"},
 		{"--no-null", "disable the effect of the previous --null option"},
@@ -157,12 +147,8 @@ Examples:
 		{"--null", "instruct subsequent -T options to read null-terminated names, -C to use null-terminated names"},
 		{"--owner-map=FILE", "use FILE to map file owner UIDs and names"},
 		{"--group-map=FILE", "use FILE to map file owner GIDs and names"},
-		{"--pax-option=keyword[[:]=value][,keyword[[:]=value]]...", "control pax keywords"},
 		{"--quoting-style=STYLE", "set name quoting style; valid STYLE values are: literal, shell, shell-always, c, c-maybe, escape, locale, clocale"},
 		{"--recursive-unlink", "empty hierarchies prior to extracting directory"},
-		{"--record-size=SIZE", "record size"},
-		{"--transform=EXPRESSION, --xform=EXPRESSION", "use sed replace EXPRESSION to transform file names"},
-		{"--xattrs-exclude=MASK", "specify the exclude pattern for xattr keys"},
 	}
 	for _, o := range localOpts {
 		fmt.Printf("  %-38s %s\n", o[0], o[1])
