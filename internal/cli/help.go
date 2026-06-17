@@ -195,7 +195,7 @@ Examples:
 }
 
 func PrintVersion(prog string) {
-	fmt.Printf("tar (tar-go) 1.35\n")
+	fmt.Printf("tar (tar-go) 0.1.0\n")
 	fmt.Printf("Copyright (C) 2026 Harland Wang\n")
 	fmt.Printf("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n")
 	fmt.Printf("This is free software: you are free to change and redistribute it.\n")

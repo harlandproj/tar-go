@@ -43,7 +43,7 @@ func TestVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("--version failed: %v", err)
 	}
-	if !strings.Contains(string(out), "1.35") {
+	if !strings.Contains(string(out), "0.1.0") {
 		t.Error("version output wrong")
 	}
 }
