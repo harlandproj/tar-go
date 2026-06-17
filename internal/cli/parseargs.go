@@ -265,6 +265,8 @@ func (p *parser) shortOption(ch byte, rest []string, idx *int, isLast bool) (nee
 		return true, ""
 	case 'T':
 		return true, ""
+	case 'X':
+		return true, ""
 
 	default:
 		p.errorMsg = fmt.Sprintf("Invalid option -- '%c'\nTry 'tar --help' or 'tar --usage' for more information.", ch)
@@ -303,6 +305,8 @@ func (p *parser) applyShortArg(ch byte, val string) {
 		p.opts.VolumeLabel = val
 	case 'T':
 		p.opts.FilesFrom = val
+	case 'X':
+		p.opts.ExcludeFrom = val
 	}
 }
 

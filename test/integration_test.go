@@ -356,3 +356,258 @@ func TestExtractOverwriteSymlink(t *testing.T) {
 		t.Error("expected symlink")
 	}
 }
+
+func TestTransform(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "--transform=s/hello/world/", "-C", dir, "hello.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with transform failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tf", archive)
+	out, _ := cmd.Output()
+	if !strings.Contains(string(out), "world.txt") {
+		t.Errorf("expected transformed name, got: %s", string(out))
+	}
+}
+
+func TestFilesFrom(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644)
+
+	listFile := filepath.Join(dir, "files.txt")
+	os.WriteFile(listFile, []byte("a.txt\nb.txt\n"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "-T", listFile, "-C", dir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with files-from failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tf", archive)
+	out, _ := cmd.Output()
+	if !strings.Contains(string(out), "a.txt") || !strings.Contains(string(out), "b.txt") {
+		t.Errorf("expected both files, got: %s", string(out))
+	}
+}
+
+func TestExcludeFrom(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "keep.txt"), []byte("keep"), 0o644)
+	os.WriteFile(filepath.Join(dir, "skip.log"), []byte("skip"), 0o644)
+
+	excludeFile := filepath.Join(dir, "excludes.txt")
+	os.WriteFile(excludeFile, []byte("*.log\n"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "-X", excludeFile, "-C", dir, "keep.txt", "skip.log")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with exclude-from failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tf", archive)
+	out, _ := cmd.Output()
+	if strings.Contains(string(out), "skip.log") {
+		t.Error("excluded file should not be in archive")
+	}
+}
+
+func TestOwnerGroup(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "--owner=testuser", "--group=testgroup", "-C", dir, "file.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with owner/group failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tvf", archive)
+	out, _ := cmd.Output()
+	if !strings.Contains(string(out), "testuser") || !strings.Contains(string(out), "testgroup") {
+		t.Errorf("expected owner/group in listing, got: %s", string(out))
+	}
+}
+
+func TestToStdout(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("hello stdout"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	exec.Command(bin(), "-cf", archive, "-C", dir, "file.txt").Run()
+
+	cmd := exec.Command(bin(), "-xf", archive, "--to-stdout")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("extract to stdout failed: %v", err)
+	}
+	if string(out) != "hello stdout" {
+		t.Errorf("expected 'hello stdout', got %q", string(out))
+	}
+}
+
+func TestDelete(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	exec.Command(bin(), "-cf", archive, "-C", dir, "a.txt", "b.txt").Run()
+
+	cmd := exec.Command(bin(), "--delete", "-f", archive, "b.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("delete failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tf", archive)
+	out, _ := cmd.Output()
+	if strings.Contains(string(out), "b.txt") {
+		t.Error("b.txt should have been deleted")
+	}
+	if !strings.Contains(string(out), "a.txt") {
+		t.Error("a.txt should still be present")
+	}
+}
+
+func TestConcat(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644)
+	os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644)
+
+	archive1 := filepath.Join(dir, "a.tar")
+	archive2 := filepath.Join(dir, "b.tar")
+	exec.Command(bin(), "-cf", archive1, "-C", dir, "a.txt").Run()
+	exec.Command(bin(), "-cf", archive2, "-C", dir, "b.txt").Run()
+
+	cmd := exec.Command(bin(), "-Af", archive1, archive2)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("concat failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tf", archive1)
+	out, _ := cmd.Output()
+	if !strings.Contains(string(out), "b.txt") {
+		t.Errorf("expected b.txt after concat, got: %s", string(out))
+	}
+}
+
+func TestKeepOldFiles(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, "out")
+	os.MkdirAll(outDir, 0o755)
+
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("archive"), 0o644)
+	archive := filepath.Join(dir, "test.tar")
+	exec.Command(bin(), "-cf", archive, "-C", dir, "file.txt").Run()
+
+	os.WriteFile(filepath.Join(outDir, "file.txt"), []byte("existing"), 0o644)
+
+	cmd := exec.Command(bin(), "-xf", archive, "-k", "-C", outDir)
+	cmd.CombinedOutput()
+
+	data, _ := os.ReadFile(filepath.Join(outDir, "file.txt"))
+	if string(data) != "existing" {
+		t.Errorf("expected existing file preserved, got %q", string(data))
+	}
+}
+
+func TestRemoveFiles(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "--remove-files", "-C", dir, "file.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with remove-files failed: %v\n%s", err, out)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "file.txt")); err == nil {
+		t.Error("file should have been removed after archiving")
+	}
+}
+
+func TestDereference(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "real.txt"), []byte("real"), 0o644)
+	os.Symlink("real.txt", filepath.Join(dir, "link.txt"))
+
+	archive := filepath.Join(dir, "test.tar")
+	cmd := exec.Command(bin(), "-cf", archive, "-h", "-C", dir, "link.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create with dereference failed: %v\n%s", err, out)
+	}
+}
+
+func TestOneTopLevel(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	exec.Command(bin(), "-cf", archive, "-C", dir, "file.txt").Run()
+
+	outDir := filepath.Join(dir, "out")
+	os.MkdirAll(outDir, 0o755)
+
+	cmd := exec.Command(bin(), "-xf", archive, "--one-top-level=myprefix", "-C", outDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("extract with one-top-level failed: %v\n%s", err, out)
+	}
+
+	if _, err := os.Stat(filepath.Join(outDir, "myprefix", "file.txt")); err != nil {
+		t.Errorf("expected file under myprefix: %v", err)
+	}
+}
+
+func TestUtcAndFullTime(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	exec.Command(bin(), "-cf", archive, "-C", dir, "file.txt").Run()
+
+	cmd := exec.Command(bin(), "-tvf", archive, "--utc", "--full-time")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("list with utc/full-time failed: %v", err)
+	}
+	if len(out) == 0 {
+		t.Error("expected output")
+	}
+}
+
+func TestZstdCompression(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("zstd data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar.zst")
+	cmd := exec.Command(bin(), "-cf", archive, "--zstd", "-C", dir, "file.txt")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create+zstd failed: %v\n%s", err, out)
+	}
+
+	cmd = exec.Command(bin(), "-tf", archive)
+	if out, err := cmd.Output(); err != nil {
+		t.Fatalf("list zstd failed: %v\n%s", err, out)
+	}
+}
+
+func TestNumericOwner(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0o644)
+
+	archive := filepath.Join(dir, "test.tar")
+	exec.Command(bin(), "-cf", archive, "-C", dir, "file.txt").Run()
+
+	cmd := exec.Command(bin(), "-tvf", archive, "--numeric-owner")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("list with numeric-owner failed: %v", err)
+	}
+	if len(out) == 0 {
+		t.Error("expected output")
+	}
+}

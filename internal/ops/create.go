@@ -301,7 +301,6 @@ func addFileToArchive(tw *tar.Writer, path string, info os.FileInfo, baseDir str
 		}
 		return err
 	}
-	defer f.Close()
 
 	if opts.Sparse {
 		if err := writeSparseFile(tw, f, info, hdr.Name); err != nil {
@@ -318,6 +317,8 @@ func addFileToArchive(tw *tar.Writer, path string, info os.FileInfo, baseDir str
 			Path: hdr.Name, Size: info.Size(), Mtime: info.ModTime(),
 		}
 	}
+
+	f.Close()
 
 	if opts.RemoveFiles {
 		os.Remove(path)
