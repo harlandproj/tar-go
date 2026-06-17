@@ -5,9 +5,4 @@ bin/
 .vscode/
 .idea/
 .DS_Store
-test/testdata/*.tar
-test/testdata/*.gz
-test/testdata/*.bz2
-test/testdata/*.xz
-
 REVIEW_ISSUES.md

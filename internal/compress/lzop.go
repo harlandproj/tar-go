@@ -179,40 +179,20 @@ func (l *lzopWriteCloser) Close() error {
 
 	var header bytes.Buffer
 	header.Write(lzopMagic)
-	hdr := make([]byte, 2+2+2+1+1+4+4+4+4+4+1)
-	binary.BigEndian.PutUint16(hdr[0:2], 0x1030)  // version
-	binary.BigEndian.PutUint16(hdr[2:4], 0x2080)  // lib version
-	binary.BigEndian.PutUint16(hdr[4:6], 0x0940)  // version needed
-	hdr[6] = 1                                     // method (LZO1X-1)
-	hdr[7] = byte(l.level)                         // level
-	binary.BigEndian.PutUint32(hdr[8:12], 0x03000000) // flags (F_ADLER32_C | F_CRC32_C)
-	// filter (4 bytes, zero)
-	// mode (4 bytes, zero)
-	// mtime low (4 bytes, zero)
-	// mtime high (4 bytes, zero)
-	hdr[28] = 0 // filename length
-	header.Write(hdr)
-
-	// header checksum (Adler-32 of everything up to this point)
-	h := adler32.New()
-	headerBytes := header.Bytes()
-	checksum := h.Sum(headerBytes[:len(headerBytes)-4])
-	header.Truncate(header.Len() - 4)
-	binary.BigEndian.PutUint32(hdr[28:32], 0)
-	header.Write(make([]byte, 4))
-	copy(header.Bytes()[header.Len()-4:], checksum[len(checksum)-4:])
-
-	// compute proper header checksum
-	header.Reset()
-	header.Write(lzopMagic)
+	hdr := make([]byte, 2+2+2+1+1+4+4+4+4+4+1+4)
+	binary.BigEndian.PutUint16(hdr[0:2], 0x1030)
+	binary.BigEndian.PutUint16(hdr[2:4], 0x2080)
+	binary.BigEndian.PutUint16(hdr[4:6], 0x0940)
+	hdr[6] = 1
+	hdr[7] = byte(l.level)
+	binary.BigEndian.PutUint32(hdr[8:12], 0x03000000)
+	hdr[28] = 0
 	header.Write(hdr)
 
 	h2 := adler32.New()
 	h2.Write(header.Bytes())
 	cs := h2.Sum32()
-	var csBytes [4]byte
-	binary.BigEndian.PutUint32(csBytes[:], cs)
-	header.Write(csBytes[:])
+	binary.BigEndian.PutUint32(hdr[29:33], cs)
 
 	if _, err := l.w.Write(header.Bytes()); err != nil {
 		return err

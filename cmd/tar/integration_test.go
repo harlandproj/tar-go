@@ -1,4 +1,4 @@
-package test
+package main
 
 import (
 	"archive/tar"
@@ -7,17 +7,20 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
-const tarBin = "../bin/tar"
+const testVersion = "0.1.0"
 
 func bin() string {
-	if fi, _ := os.Stat("../bin/tar.exe"); fi != nil {
-		return "../bin/tar.exe"
+	if runtime.GOOS == "windows" {
+		if fi, _ := os.Stat("../../bin/tar.exe"); fi != nil {
+			return "../../bin/tar.exe"
+		}
 	}
-	return "../bin/tar"
+	return "../../bin/tar"
 }
 
 func TestHelpOutput(t *testing.T) {
@@ -43,8 +46,8 @@ func TestVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("--version failed: %v", err)
 	}
-	if !strings.Contains(string(out), "0.1.0") {
-		t.Error("version output wrong")
+	if !strings.Contains(string(out), testVersion) {
+		t.Errorf("version output missing %q", testVersion)
 	}
 }
 
@@ -325,6 +328,10 @@ func TestVolumeLabel(t *testing.T) {
 }
 
 func TestExtractOverwriteSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks require admin on Windows")
+	}
+
 	dir := t.TempDir()
 	outDir := filepath.Join(dir, "out")
 	os.MkdirAll(outDir, 0o755)
@@ -531,6 +538,10 @@ func TestRemoveFiles(t *testing.T) {
 }
 
 func TestDereference(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks require admin on Windows")
+	}
+
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "real.txt"), []byte("real"), 0o644)
 	os.Symlink("real.txt", filepath.Join(dir, "link.txt"))

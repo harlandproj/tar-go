@@ -904,3 +904,303 @@ func TestParseKeepNewerFiles(t *testing.T) {
 		t.Errorf("expected OldKeepNewerFiles, got %d", opts.KeepOldFiles)
 	}
 }
+
+func TestParseWarningOption(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--warning-option=2"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.WarningOption != 2 {
+		t.Errorf("expected 2, got %d", opts.WarningOption)
+	}
+}
+
+func TestParseWarningKeywords(t *testing.T) {
+	keywords := []string{
+		"alone-zero-block", "bad-dumpdir", "cachedir", "contiguous-cast",
+		"file-changed", "file-ignored", "file-removed", "file-shrank",
+		"file-unchanged", "filename-with-nuls", "ignore-archive",
+		"ignore-newer", "new-directory", "rename-directory",
+		"symlink-cast", "timestamp", "unknown-cast", "unknown-keyword",
+		"xdev", "decompress-program", "existing-file", "xattr-write",
+		"record-size", "failed-read", "missing-zero-blocks", "empty-transform",
+	}
+	for _, kw := range keywords {
+		opts := &Options{}
+		err := parseArgs([]string{"tar", "-cf", "a.tar", "--warning=" + kw}, opts)
+		if err != nil {
+			t.Errorf("--warning=%s: %v", kw, err)
+		}
+		if opts.Warning == 0 {
+			t.Errorf("--warning=%s: expected non-zero warning", kw)
+		}
+	}
+}
+
+func TestParseWarningMultiple(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--warning=file-changed,file-removed"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Warning&WarnFileChanged == 0 || opts.Warning&WarnFileRemoved == 0 {
+		t.Error("expected both warning flags")
+	}
+}
+
+func TestParseUsage(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "--usage"}, opts)
+	if err != ErrHelpRequested {
+		t.Errorf("expected ErrHelpRequested, got %v", err)
+	}
+}
+
+func TestParseShowDefaults(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "--show-defaults"}, opts)
+	if err != ErrHelpRequested {
+		t.Errorf("expected ErrHelpRequested, got %v", err)
+	}
+}
+
+func TestParseLongFlags(t *testing.T) {
+	tests := []struct {
+		args []string
+		check func(*Options) bool
+	}{
+		{[]string{"tar", "-cf", "a.tar", "--sparse"}, func(o *Options) bool { return o.Sparse }},
+		{[]string{"tar", "-cf", "a.tar", "--touch"}, func(o *Options) bool { return o.Touch }},
+		{[]string{"tar", "-cf", "a.tar", "--absolute-names"}, func(o *Options) bool { return o.AbsoluteNames }},
+		{[]string{"tar", "-cf", "a.tar", "--to-stdout"}, func(o *Options) bool { return o.ToStdout }},
+		{[]string{"tar", "-cf", "a.tar", "--block-number"}, func(o *Options) bool { return o.BlockNumber }},
+		{[]string{"tar", "-cf", "a.tar", "--check-links"}, func(o *Options) bool { return o.CheckLinks }},
+		{[]string{"tar", "-cf", "a.tar", "--verify"}, func(o *Options) bool { return o.Verify }},
+		{[]string{"tar", "-cf", "a.tar", "--multi-volume"}, func(o *Options) bool { return o.MultiVolume }},
+		{[]string{"tar", "-cf", "a.tar", "--ignore-zeros"}, func(o *Options) bool { return o.IgnoreZeros }},
+		{[]string{"tar", "-cf", "a.tar", "--utc"}, func(o *Options) bool { return o.Utc }},
+		{[]string{"tar", "-cf", "a.tar", "--full-time"}, func(o *Options) bool { return o.FullTime }},
+		{[]string{"tar", "-cf", "a.tar", "--same-permissions"}, func(o *Options) bool { return o.SamePermissions }},
+		{[]string{"tar", "-xf", "a.tar", "--recursive-unlink"}, func(o *Options) bool { return o.RecursiveUnlink }},
+		{[]string{"tar", "-cf", "a.tar", "--restrict"}, func(o *Options) bool { return o.Restrict }},
+		{[]string{"tar", "-cf", "a.tar", "--exclude-backups"}, func(o *Options) bool { return o.ExcludeBackups }},
+		{[]string{"tar", "-cf", "a.tar", "--ignore-failed-read"}, func(o *Options) bool { return o.IgnoreFailedRead }},
+		{[]string{"tar", "-cf", "a.tar", "--show-transformed-names"}, func(o *Options) bool { return o.ShowTransformed }},
+	}
+	for _, tt := range tests {
+		opts := &Options{}
+		err := parseArgs(tt.args, opts)
+		if err != nil {
+			t.Errorf("%v: %v", tt.args, err)
+		}
+		if !tt.check(opts) {
+			t.Errorf("%v: check failed", tt.args)
+		}
+	}
+}
+
+func TestParseQuotingStyle(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--quoting-style=shell"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.QuotingStyle != "shell" {
+		t.Errorf("expected shell, got %q", opts.QuotingStyle)
+	}
+}
+
+func TestParseSuffix(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-xf", "a.tar", "--suffix=.bak"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.BackupSuffix != ".bak" {
+		t.Errorf("expected .bak, got %q", opts.BackupSuffix)
+	}
+}
+
+func TestParseOccurrence(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-xf", "a.tar", "--occurrence=3"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Occurrence != 3 {
+		t.Errorf("expected 3, got %d", opts.Occurrence)
+	}
+}
+
+func TestParseOccurrenceDefault(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-xf", "a.tar", "--occurrence"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Occurrence != 1 {
+		t.Errorf("expected 1, got %d", opts.Occurrence)
+	}
+}
+
+func TestParseNewerMtime(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--newer-mtime=2024-01-01"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.NewerMtime.IsZero() {
+		t.Error("expected newer mtime to be set")
+	}
+}
+
+func TestParseMtimeCtime(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--mtime=ctime"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.SetMtimeMode != MtimeCommand {
+		t.Errorf("expected MtimeCommand, got %d", opts.SetMtimeMode)
+	}
+	if opts.SetMtimeCommand != "ctime" {
+		t.Errorf("expected ctime, got %q", opts.SetMtimeCommand)
+	}
+}
+
+func TestParseAutoCompressWithSuffix(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar.gz", "-a"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.CompressProgram != "gzip" {
+		t.Errorf("expected gzip from auto-compress, got %q", opts.CompressProgram)
+	}
+}
+
+func TestParseCheckpointDefault(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--checkpoint"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Checkpoint != 10 {
+		t.Errorf("expected 10, got %d", opts.Checkpoint)
+	}
+}
+
+func TestParseBackupDefault(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-xf", "a.tar", "--backup"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.BackupType != "existing" {
+		t.Errorf("expected existing, got %q", opts.BackupType)
+	}
+}
+
+func TestParseOneTopLevelDefault(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-xf", "a.tar", "--one-top-level"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.OneTopLevel != "." {
+		t.Errorf("expected ., got %q", opts.OneTopLevel)
+	}
+}
+
+func TestParseTotals(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--totals"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opts.ShowTotals {
+		t.Error("expected show-totals")
+	}
+}
+
+func TestParseTotalsWithSignal(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--totals=SIGUSR1"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opts.ShowTotals {
+		t.Error("expected show-totals")
+	}
+	if opts.TotalsSignal != "SIGUSR1" {
+		t.Errorf("expected SIGUSR1, got %q", opts.TotalsSignal)
+	}
+}
+
+func TestParseXformShort(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "--xform=s/old/new/"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Transform != "s/old/new/" {
+		t.Errorf("expected s/old/new/, got %q", opts.Transform)
+	}
+}
+
+func TestParseNoDelayDirRestore(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-xf", "a.tar", "--no-delay-directory-restore"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.DelayDirRestore {
+		t.Error("expected delay-dir-restore to be false")
+	}
+}
+
+func TestParseShortH(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "-H", "ustar"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.ArchiveFormat != FormatUstar {
+		t.Errorf("expected FormatUstar, got %d", opts.ArchiveFormat)
+	}
+}
+
+func TestParseShortC(t *testing.T) {
+	opts := &Options{}
+	err := parseArgs([]string{"tar", "-cf", "a.tar", "-C", "/tmp"}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for i, f := range opts.FileNames {
+		if f == "-C" && i+1 < len(opts.FileNames) && opts.FileNames[i+1] == "/tmp" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected -C /tmp in FileNames, got %v", opts.FileNames)
+	}
+}
+
+func TestParseSizeUnits(t *testing.T) {
+	tests := []struct {
+		input string
+		want  int64
+	}{
+		{"1T", 1 * 1024 * 1024 * 1024 * 1024},
+		{"100k", 100 * 1024},
+		{"5M", 5 * 1024 * 1024},
+	}
+	for _, tt := range tests {
+		got := parseSize(tt.input)
+		if got != tt.want {
+			t.Errorf("parseSize(%q) = %d, want %d", tt.input, got, tt.want)
+		}
+	}
+}
