@@ -1,4 +1,4 @@
-# superpower-tar
+# tar-go
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/harlandproj/tar-go)](https://goreportcard.com/report/github.com/harlandproj/tar-go)
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D1.22-blue)](https://go.dev/)
@@ -67,7 +67,6 @@ Produces:
 ## Project Structure
 
 ```
-superpower-tar/
 ├── cmd/tar/main.go              # Entry point
 ├── internal/
 │   ├── app/                     # Application orchestration
