@@ -3,6 +3,7 @@ package misc
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -40,8 +41,9 @@ func TestSafePath(t *testing.T) {
 		t.Errorf("SafePath = %q, want %q", result, expected)
 	}
 	result = SafePath("/base", "../escape")
-	if filepath.IsAbs(result) {
-		t.Errorf("SafePath should clean path: got %q", result)
+	base := filepath.Clean("/base")
+	if !(strings.HasPrefix(filepath.Clean(result), base+string(filepath.Separator)) || filepath.Clean(result) == base) {
+		t.Errorf("SafePath should keep path under base: got %q", result)
 	}
 }
 
