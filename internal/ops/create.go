@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,6 +21,9 @@ func Create(opts *cli.Options) error {
 	files := resolveFiles(opts.FileNames)
 	if opts.FilesFrom != "" {
 		files = append(files, readFileList(opts.FilesFrom)...)
+	}
+	if opts.SortOrder == "name" {
+		sort.Strings(files)
 	}
 
 	var xform *filters.Transform
@@ -78,6 +82,18 @@ func Create(opts *cli.Options) error {
 	}
 
 	excluder := filters.NewExcluder(opts)
+
+	checkpointCount := 0
+	addAndCheckpoint := func(tw *tar.Writer, path string, fi os.FileInfo, baseDir string, opts *cli.Options, xform *filters.Transform, snap *increm.Snapshot) error {
+		err := addFileToArchive(tw, path, fi, baseDir, opts, xform, snap)
+		if err == nil && opts.Checkpoint > 0 {
+			checkpointCount++
+			if checkpointCount%opts.Checkpoint == 0 {
+				fmt.Fprintf(cli.Stderr, "tar: checkpoint %d reached\n", checkpointCount)
+			}
+		}
+		return err
+	}
 
 	baseDir, err := os.Getwd()
 	if err != nil {
@@ -153,9 +169,9 @@ func Create(opts *cli.Options) error {
 						}
 						return err
 					}
-					return addFileToArchive(tw, path, realInfo, baseDir, opts, xform, snap)
+					return addAndCheckpoint(tw, path, realInfo, baseDir, opts, xform, snap)
 				}
-				return addFileToArchive(tw, path, fi, baseDir, opts, xform, snap)
+				return addAndCheckpoint(tw, path, fi, baseDir, opts, xform, snap)
 			})
 			if err != nil {
 				return err
@@ -179,7 +195,7 @@ func Create(opts *cli.Options) error {
 				}
 				fi = realInfo
 			}
-			if err := addFileToArchive(tw, fullPath, fi, baseDir, opts, xform, snap); err != nil {
+			if err := addAndCheckpoint(tw, fullPath, fi, baseDir, opts, xform, snap); err != nil {
 				return err
 			}
 		}
@@ -187,6 +203,12 @@ func Create(opts *cli.Options) error {
 
 	if snap != nil && opts.ListedIncremental != "" {
 		snap.Save(opts.ListedIncremental)
+	}
+
+	if opts.Verify {
+		if err := verifyArchive(opts); err != nil {
+			return fmt.Errorf("verify failed: %w", err)
+		}
 	}
 
 	return nil
@@ -335,4 +357,37 @@ func readFileList(path string) []string {
 		}
 	}
 	return result
+}
+
+func verifyArchive(opts *cli.Options) error {
+	archiveName := "tar.out"
+	if len(opts.ArchiveNames) > 0 {
+		archiveName = opts.ArchiveNames[0]
+	}
+	f, err := os.Open(archiveName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	r, err := openArchiveReader(opts)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(io.Discard, tr); err != nil {
+			return fmt.Errorf("verifying %s: %w", hdr.Name, err)
+		}
+	}
+	return nil
 }

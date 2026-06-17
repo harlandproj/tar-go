@@ -32,6 +32,11 @@ func List(opts *cli.Options) error {
 	skipping := opts.StartingFile != ""
 	foundCounts := make(map[string]int)
 	blockNum := 0
+	namesInArchive := make(map[string]bool)
+	var hardLinks []struct {
+		name     string
+		linkname string
+	}
 
 	for {
 		hdr, err := tr.Next()
@@ -66,6 +71,14 @@ func List(opts *cli.Options) error {
 			name = xform.Apply(name)
 		}
 
+		namesInArchive[hdr.Name] = true
+		if hdr.Typeflag == tar.TypeLink {
+			hardLinks = append(hardLinks, struct {
+				name     string
+				linkname string
+			}{hdr.Name, hdr.Linkname})
+		}
+
 		blockNum++
 		if opts.Verbose > 0 {
 			line := formatVerbose(hdr, name, opts, blockNum)
@@ -83,7 +96,11 @@ func List(opts *cli.Options) error {
 	}
 
 	if opts.CheckLinks {
-		fmt.Fprintln(cli.Stderr, "tar: check-links not fully implemented")
+		for _, lnk := range hardLinks {
+			if !namesInArchive[lnk.linkname] {
+				fmt.Fprintf(cli.Stderr, "tar: %s: link target %s not found in archive\n", lnk.name, lnk.linkname)
+			}
+		}
 	}
 
 	return nil

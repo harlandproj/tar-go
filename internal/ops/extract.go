@@ -2,6 +2,7 @@ package ops
 
 import (
 	"archive/tar"
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -88,6 +89,13 @@ func Extract(opts *cli.Options) error {
 
 		if name == "" {
 			continue
+		}
+
+		if opts.Interactive {
+			if !confirmAction(name) {
+				io.Copy(io.Discard, tr)
+				continue
+			}
 		}
 
 		if opts.Verbose > 0 {
@@ -203,6 +211,10 @@ func extractRegularFile(name string, hdr *tar.Header, tr *tar.Reader, opts *cli.
 		os.RemoveAll(name)
 	}
 
+	if opts.BackupType != "" {
+		makeBackup(name, opts.BackupType)
+	}
+
 	os.MkdirAll(filepath.Dir(name), 0o755)
 
 	f, err := os.Create(name)
@@ -249,4 +261,15 @@ func (es *extractState) applyDelayDirRestore() {
 			os.Chtimes(dd.name, time.Now(), dd.hdr.ModTime)
 		}
 	}
+}
+
+func confirmAction(name string) bool {
+	fmt.Fprintf(cli.Stderr, "tar: extract '%s'? ", name)
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return false
+	}
+	line = strings.TrimSpace(strings.ToLower(line))
+	return line == "y" || line == "yes"
 }

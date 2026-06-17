@@ -1,6 +1,8 @@
 package filters
 
 import (
+	"bufio"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,11 +27,32 @@ func NewExcluder(opts *cli.Options) *Excluder {
 		excludeBackups: opts.ExcludeBackups,
 		excludeVCS:     opts.ExcludeVCS,
 	}
+	if opts.ExcludeFrom != "" {
+		e.patterns = append(e.patterns, loadExcludeFile(opts.ExcludeFrom)...)
+	}
 	return e
+}
+
+func loadExcludeFile(path string) []string {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	var patterns []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line != "" && !strings.HasPrefix(line, "#") {
+			patterns = append(patterns, line)
+		}
+	}
+	return patterns
 }
 
 func (e *Excluder) Match(path string) bool {
 	base := filepath.Base(path)
+
 	if e.excludeBackups && (strings.HasSuffix(base, "~") || strings.HasSuffix(base, ".bak")) {
 		return true
 	}
@@ -39,6 +62,7 @@ func (e *Excluder) Match(path string) bool {
 	if e.excludeCaches && base == "CACHEDIR.TAG" {
 		return true
 	}
+
 	for _, pat := range e.patterns {
 		if matched, _ := filepath.Match(pat, base); matched {
 			return true

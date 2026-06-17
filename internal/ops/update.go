@@ -84,7 +84,7 @@ func Update(opts *cli.Options) error {
 		if opts.Verbose > 0 {
 			fmt.Println(name)
 		}
-		if err := addFileToArchive(tw, fullPath, info, baseDir, opts); err != nil {
+		if err := addFileToArchive(tw, fullPath, info, baseDir, opts, nil, nil); err != nil {
 			return err
 		}
 		added++

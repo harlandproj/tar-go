@@ -162,6 +162,7 @@ type Options struct {
 
 	Exclude        []string
 	ExcludeFrom    string
+	FilesFrom      string
 	ExcludeCaches  bool
 	ExcludeBackups bool
 	ExcludeVCS     bool
